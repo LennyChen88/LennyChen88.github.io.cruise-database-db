@@ -3079,7 +3079,7 @@ loadFleetLive().then(live=>{
   <span id="updateToastMsg"></span>
   <button type="button" onclick="applyUpdate()">刷新</button>
 </div>
-<button type="button" id="installBtn" class="install-btn" style="display:none">📲 安装到桌面</button>
+<button type="button" id="installBtn" class="install-btn">📲 安装到手机</button>
 <script>
   function showPortFallback(){
     var pm=document.getElementById('portmap');
@@ -3088,45 +3088,44 @@ loadFleetLive().then(live=>{
     if(mn){ mn.textContent=lang==='en'?'Map shown on desktop (WorkBuddy).':'地图在桌面端（WorkBuddy）显示。'; }
   }
   if('serviceWorker' in navigator){
-    window.addEventListener('load',function(){
-      navigator.serviceWorker.register('./sw.js').then(function(reg){
-        reg.addEventListener('updatefound',function(){
-          var installing=reg.installing;
-          if(!installing) return;
-          installing.addEventListener('statechange',function(){
-            if(installing.state==='installed' && navigator.serviceWorker.controller){
-              var msg=document.getElementById('updateToastMsg');
-              if(msg) msg.textContent=(lang==='en'?'New version available':'有新版本');
-              showUpdateToast();
-            }
-          });
+    navigator.serviceWorker.register('./sw.js').then(function(reg){
+      reg.addEventListener('updatefound',function(){
+        var installing=reg.installing;
+        if(!installing) return;
+        installing.addEventListener('statechange',function(){
+          if(installing.state==='installed' && navigator.serviceWorker.controller){
+            var msg=document.getElementById('updateToastMsg');
+            if(msg) msg.textContent=(lang==='en'?'New version available':'有新版本');
+            showUpdateToast();
+          }
         });
-      }).catch(function(){});
-    });
+      });
+    }).catch(function(){});
   }
   function showUpdateToast(){ var t=document.getElementById('updateToast'); if(t) t.style.display='flex'; }
   function applyUpdate(){ var t=document.getElementById('updateToast'); if(t) t.style.display='none'; if(navigator.serviceWorker&&navigator.serviceWorker.controller){ navigator.serviceWorker.controller.postMessage('skipWaiting'); } setTimeout(function(){ window.location.reload(); },200); }
-  /* 安装到桌面按钮：捕获 beforeinstallprompt，主动弹出安装框 */
+  /* 安装到桌面按钮：默认显示，已安装则隐藏；捕获 beforeinstallprompt 可直接 prompt 安装 */
   (function(){
     var installBtn=document.getElementById('installBtn');
     if(!installBtn) return;
     var isStandalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone;
-    if(isStandalone) return;
-    var deferredPrompt=null, installMode='pending';
+    if(isStandalone){ installBtn.style.display='none'; return; }
+    var deferredPrompt=null, canPrompt=false;
     window.addEventListener('beforeinstallprompt',function(e){
-      e.preventDefault(); deferredPrompt=e; installMode='prompt';
-      installBtn.textContent='📲 安装到桌面'; installBtn.style.display='inline-flex';
+      e.preventDefault(); deferredPrompt=e; canPrompt=true;
+      installBtn.textContent='📲 安装到桌面';
     });
-    setTimeout(function(){
-      if(!deferredPrompt){ installMode='guide'; installBtn.textContent='📲 安装到手机'; installBtn.style.display='inline-flex'; }
-    },2500);
     installBtn.addEventListener('click',function(){
-      if(installMode==='prompt'&&deferredPrompt){
-        deferredPrompt.prompt();
-        deferredPrompt=null; installBtn.style.display='none';
+      if(canPrompt&&deferredPrompt){
+        deferredPrompt.prompt(); deferredPrompt=null; canPrompt=false;
+        installBtn.style.display='none';
       }else{
         var L=(typeof lang!=='undefined')?lang:'zh';
-        alert(L==='en'?'To install: tap your browser menu (⋮) → “Install app” / “Add to Home screen”, or the “+” icon by the address bar.':'请在浏览器菜单（⋮）中选择「安装应用 / 添加到主屏幕」，或点击地址栏右侧的「+」号，即可安装到手机桌面。');
+        alert(L==='en'?'Step 1: Open this page in Chrome (not WeChat/QQ built-in browser).
+Step 2: Tap the ⋮ menu or "+" icon by the address bar.
+Step 3: Choose "Install app" or "Add to Home screen".':'第1步：请用手机 Chrome 浏览器打开此页面（不要用微信/QQ 内置浏览器）。
+第2步：点击地址栏右侧的「+」号，或右上角「⋮」菜单。
+第3步：选择「安装应用 / 添加到主屏幕」，确认即可。');
       }
     });
     window.addEventListener('appinstalled',function(){ installBtn.style.display='none'; });
