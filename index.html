@@ -264,11 +264,6 @@
 .mf-ico{font-size:34px}
 .update-toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:50;display:none;align-items:center;gap:12px;background:var(--navy);color:#fff;padding:10px 14px;border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.25);font-size:13px;max-width:92vw}
 .update-toast button{background:var(--teal-light);color:#fff;border:none;padding:6px 14px;border-radius:999px;font-weight:600;cursor:pointer;white-space:nowrap}
-.install-btn{position:fixed;right:14px;bottom:16px;z-index:60;display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:#fff;border:none;padding:13px 18px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.28);max-width:90vw}
-.install-btn:active{transform:scale(.97)}
-.fs-banner{position:fixed;top:0;left:0;right:0;z-index:70;display:none;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,#0b2545,#1a4a7a);color:#fff;padding:10px 14px;font-size:13.5px;font-weight:600;box-shadow:0 2px 12px rgba(0,0,0,.35)}
-.fs-banner button{background:var(--teal);color:#fff;border:none;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
-@media (max-width:768px){ .install-btn{bottom:calc(16px + env(safe-area-inset-bottom,0px))} .fs-banner{padding:8px 12px;font-size:12.5px} }
 </style>
 
 </head>
@@ -3082,11 +3077,6 @@ loadFleetLive().then(live=>{
   <span id="updateToastMsg"></span>
   <button type="button" onclick="applyUpdate()">刷新</button>
 </div>
-<button type="button" id="installBtn" class="install-btn">📲 安装到手机</button>
-<div id="fsBanner" class="fs-banner">
-  <span id="fsBannerTxt">📱 点击进入全屏模式（隐藏地址栏）</span>
-  <button type="button" id="fsGoBtn">进入全屏</button>
-</div>
 <script>
   function showPortFallback(){
     var pm=document.getElementById('portmap');
@@ -3111,52 +3101,6 @@ loadFleetLive().then(live=>{
   }
   function showUpdateToast(){ var t=document.getElementById('updateToast'); if(t) t.style.display='flex'; }
   function applyUpdate(){ var t=document.getElementById('updateToast'); if(t) t.style.display='none'; if(navigator.serviceWorker&&navigator.serviceWorker.controller){ navigator.serviceWorker.controller.postMessage('skipWaiting'); } setTimeout(function(){ window.location.reload(); },200); }
-  /* 自动全屏：非 standalone 模式时，提示用户进入全屏（绕过浏览器地址栏限制） */
-  (function(){
-    var isStandalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone;
-    if(isStandalone) return;
-    var fsBanner=document.getElementById('fsBanner');
-    if(!fsBanner) return;
-    var L=(typeof lang!=='undefined')?lang:'zh';
-    fsBanner.style.display='flex';
-    document.getElementById('fsGoBtn').addEventListener('click',function(){
-      var el=document.documentElement;
-      if(el.requestFullscreen){ el.requestFullscreen().catch(function(){}); }
-      else if(el.webkitRequestFullscreen){ el.webkitRequestFullscreen(); }
-      else if(el.msRequestFullscreen){ el.msRequestFullscreen(); }
-      fsBanner.style.display='none';
-    });
-    /* 全屏退出时重新显示提示 */
-    document.addEventListener('fullscreenchange',function(){
-      if(!document.fullscreenElement&&!isStandalone&&fsBanner) fsBanner.style.display='flex';
-    });
-  })();
-  /* 安装到桌面按钮：默认显示，已安装则隐藏；捕获 beforeinstallprompt 可直接 prompt 安装 */
-  (function(){
-    var installBtn=document.getElementById('installBtn');
-    if(!installBtn) return;
-    var isStandalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone;
-    if(isStandalone){ installBtn.style.display='none'; return; }
-    var deferredPrompt=null, canPrompt=false;
-    window.addEventListener('beforeinstallprompt',function(e){
-      e.preventDefault(); deferredPrompt=e; canPrompt=true;
-      installBtn.textContent='📲 安装到桌面';
-    });
-    installBtn.addEventListener('click',function(){
-      if(canPrompt&&deferredPrompt){
-        deferredPrompt.prompt(); deferredPrompt=null; canPrompt=false;
-        installBtn.style.display='none';
-      }else{
-        var L=(typeof lang!=='undefined')?lang:'zh';
-        alert(L==='en'?'Step 1: Open this page in Chrome (not WeChat/QQ built-in browser).
-Step 2: Tap the ⋮ menu or "+" icon by the address bar.
-Step 3: Choose "Install app" or "Add to Home screen".':'第1步：请用手机 Chrome 浏览器打开此页面（不要用微信/QQ 内置浏览器）。
-第2步：点击地址栏右侧的「+」号，或右上角「⋮」菜单。
-第3步：选择「安装应用 / 添加到主屏幕」，确认即可。');
-      }
-    });
-    window.addEventListener('appinstalled',function(){ installBtn.style.display='none'; });
-  })();
 </script>
 
 </body>
